@@ -47,6 +47,7 @@ public class ForwarderHttpClientFactory : IForwarderHttpClientFactory
             AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.None,
             UseCookies = false,
+            EnableMultipleHttp2Connections = true,
             ActivityHeadersPropagator = new ReverseProxyPropagator(DistributedContextPropagator.Current),
             ConnectTimeout = TimeSpan.FromSeconds(15),
 
@@ -91,7 +92,9 @@ public class ForwarderHttpClientFactory : IForwarderHttpClientFactory
         }
         if (newConfig.DangerousAcceptAnyServerCertificate ?? false)
         {
+#pragma warning disable CA5359 // Do Not Disable Certificate Validation -- this setting is explicitly opt-in by the user.
             handler.SslOptions.RemoteCertificateValidationCallback = delegate { return true; };
+#pragma warning restore CA5359
         }
 
         handler.EnableMultipleHttp2Connections = newConfig.EnableMultipleHttp2Connections.GetValueOrDefault(true);
@@ -102,6 +105,12 @@ public class ForwarderHttpClientFactory : IForwarderHttpClientFactory
             handler.RequestHeaderEncodingSelector = (_, _) => encoding;
         }
 
+        if (newConfig.ResponseHeaderEncoding is not null)
+        {
+            var encoding = Encoding.GetEncoding(newConfig.ResponseHeaderEncoding);
+            handler.ResponseHeaderEncodingSelector = (_, _) => encoding;
+        }
+
         var webProxy = TryCreateWebProxy(newConfig.WebProxy);
         if (webProxy is not null)
         {
@@ -110,7 +119,7 @@ public class ForwarderHttpClientFactory : IForwarderHttpClientFactory
         }
     }
 
-    private static IWebProxy? TryCreateWebProxy(WebProxyConfig? webProxyConfig)
+    private static WebProxy? TryCreateWebProxy(WebProxyConfig? webProxyConfig)
     {
         if (webProxyConfig is null || webProxyConfig.Address is null)
         {

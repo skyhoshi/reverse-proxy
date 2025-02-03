@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -13,7 +14,7 @@ namespace Yarp.ReverseProxy.Health;
 internal sealed class ClusterDestinationsUpdater : IClusterDestinationsUpdater
 {
     private readonly ConditionalWeakTable<ClusterState, SemaphoreSlim> _clusterLocks = new ConditionalWeakTable<ClusterState, SemaphoreSlim>();
-    private readonly IDictionary<string, IAvailableDestinationsPolicy> _destinationPolicies;
+    private readonly FrozenDictionary<string, IAvailableDestinationsPolicy> _destinationPolicies;
 
     public ClusterDestinationsUpdater(IEnumerable<IAvailableDestinationsPolicy> destinationPolicies)
     {
@@ -88,7 +89,7 @@ internal sealed class ClusterDestinationsUpdater : IClusterDestinationsUpdater
                 // the semaphore's count is still 0. However, T2 could have already made some progress and didn't observe updates made
                 // by T3.
                 // By releasing the semaphore under the lock, we make sure that in the above situation T3 will proceed till the lock and
-                // its updates will be observed anyways.
+                // its updates will be observed anyway.
                 updateLock.Release();
             }
         }

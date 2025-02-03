@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
   <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+  <Import Project="TFMs.props" />
 
   <PropertyGroup>
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
     <PackageIcon></PackageIcon>
     <PackageIconFullPath></PackageIconFullPath>
-    <LangVersion>11.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <StrongNameKeyId>Microsoft</StrongNameKeyId>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
   </PropertyGroup>
 
   <PropertyGroup>

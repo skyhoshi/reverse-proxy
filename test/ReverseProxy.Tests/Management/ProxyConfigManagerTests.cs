@@ -806,6 +806,7 @@ public class ProxyConfigManagerTests
                 SslProtocols = SslProtocols.Tls11 | SslProtocols.Tls12,
                 MaxConnectionsPerServer = 10,
                 RequestHeaderEncoding = Encoding.UTF8.WebName,
+                ResponseHeaderEncoding = Encoding.UTF8.WebName,
             },
             HealthCheck = new HealthCheckConfig
             {
@@ -834,6 +835,7 @@ public class ProxyConfigManagerTests
         Assert.Equal(SslProtocols.Tls11 | SslProtocols.Tls12, clusterModel.Config.HttpClient.SslProtocols);
         Assert.Equal(10, clusterModel.Config.HttpClient.MaxConnectionsPerServer);
         Assert.Equal(Encoding.UTF8.WebName, clusterModel.Config.HttpClient.RequestHeaderEncoding);
+        Assert.Equal(Encoding.UTF8.WebName, clusterModel.Config.HttpClient.ResponseHeaderEncoding);
 
         var handler = ForwarderHttpClientFactoryTests.GetHandler(clusterModel.HttpClient);
         Assert.Equal(SslProtocols.Tls11 | SslProtocols.Tls12, handler.SslOptions.EnabledSslProtocols);
@@ -1198,7 +1200,7 @@ public class ProxyConfigManagerTests
         Assert.NotNull(dataSource);
         Assert.Equal(2, dataSource.Endpoints.Count);
 
-        var endpoint1 = Assert.Single(dataSource.Endpoints.Where(x => x.DisplayName == "route1"));
+        var endpoint1 = Assert.Single(dataSource.Endpoints, e => e.DisplayName == "route1");
         var routeConfig1 = endpoint1.Metadata.GetMetadata<RouteModel>();
         Assert.Equal(47, routeConfig1.Config.Order);
         var clusterState1 = routeConfig1.Cluster;
@@ -1208,7 +1210,7 @@ public class ProxyConfigManagerTests
         var destination = Assert.Single(clusterState1.DestinationsState.AllDestinations);
         Assert.Equal("http://localhost", destination.Model.Config.Address);
 
-        var endpoint2 = Assert.Single(dataSource.Endpoints.Where(x => x.DisplayName == "route2"));
+        var endpoint2 = Assert.Single(dataSource.Endpoints, e => e.DisplayName == "route2");
         var routeConfig2 = endpoint2.Metadata.GetMetadata<RouteModel>();
         Assert.Equal(12, routeConfig2.Config.Order);
     }
@@ -1392,8 +1394,10 @@ public class ProxyConfigManagerTests
         var ioEx = await Assert.ThrowsAsync<InvalidOperationException>(() => configManager.InitialLoadAsync());
         Assert.Equal("Unable to load or apply the proxy configuration.", ioEx.Message);
 
-        var innerExc = Assert.IsType<InvalidOperationException>(ioEx.InnerException);
-        Assert.Equal("Throwing!", innerExc.Message);
+        var innerExc1 = Assert.IsType<InvalidOperationException>(ioEx.InnerException);
+        Assert.Equal("Error resolving destinations for cluster cluster1", innerExc1.Message);
+        var innerExc2 = Assert.IsType<InvalidOperationException>(innerExc1.InnerException);
+        Assert.Equal("Throwing!", innerExc2.Message);
     }
 
     [Fact]
@@ -1640,7 +1644,9 @@ public class ProxyConfigManagerTests
 
         // Read the failure event
         var configLoadException = Assert.IsType<TestConfigChangeListener.ConfigurationLoadingFailedEvent>(await configListener.Events.Reader.ReadAsync());
-        var ex = configLoadException.Exception;
-        Assert.Equal("Throwing!", ex.Message);
+        var innerExc1 = Assert.IsType<InvalidOperationException>(configLoadException.Exception);
+        Assert.Equal("Error resolving destinations for cluster cluster1", innerExc1.Message);
+        var innerExc2 = Assert.IsType<InvalidOperationException>(innerExc1.InnerException);
+        Assert.Equal("Throwing!", innerExc2.Message);
     }
 }

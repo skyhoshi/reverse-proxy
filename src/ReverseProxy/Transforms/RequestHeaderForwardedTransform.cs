@@ -19,9 +19,9 @@ public class RequestHeaderForwardedTransform : RequestTransform
     internal static readonly RequestHeaderForwardedTransform RemoveTransform =
         new RequestHeaderForwardedTransform(new NullRandomFactory(), NodeFormat.Random, NodeFormat.Random, false, false, ForwardedTransformActions.Remove);
 
-    private static readonly string ForwardedHeaderName = "Forwarded";
+    private const string ForwardedHeaderName = "Forwarded";
     // obfnode = "_" 1*( ALPHA / DIGIT / "." / "_" / "-")
-    private static readonly string ObfChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-";
+    private const string ObfChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-";
 
     private readonly IRandomFactory _randomFactory;
 
@@ -79,13 +79,12 @@ public class RequestHeaderForwardedTransform : RequestTransform
 
     private string GetHeaderValue(HttpContext httpContext)
     {
-        var builder = new ValueStringBuilder();
+        var builder = new ValueStringBuilder(stackalloc char[ValueStringBuilder.StackallocThreshold]);
         AppendProto(httpContext, ref builder);
         AppendHost(httpContext, ref builder);
         AppendFor(httpContext, ref builder);
         AppendBy(httpContext, ref builder);
-        var value = builder.ToString();
-        return value;
+        return builder.ToString();
     }
 
     private void AppendProto(HttpContext context, ref ValueStringBuilder builder)
@@ -142,6 +141,12 @@ public class RequestHeaderForwardedTransform : RequestTransform
     // https://tools.ietf.org/html/rfc7239#section-6
     private void AppendNode(IPAddress? ipAddress, int port, NodeFormat format, ref ValueStringBuilder builder)
     {
+        // Prefer IPv4 formatting
+        if (ipAddress is { IsIPv4MappedToIPv6: true })
+        {
+            ipAddress = ipAddress.MapToIPv4();
+        }
+
         // "It is important to note that an IPv6 address and any nodename with
         // node-port specified MUST be quoted, since ":" is not an allowed
         // character in "token"."
